@@ -358,6 +358,30 @@
   const MILESTONES = new Set([50, 40, 30, 20]);
   const LONG_PRESS_MS = 600;
 
+  // ── Tick sound ────────────────────────────────────────────────────────────
+  let audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playTick() {
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, ctx.currentTime);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.04);
+    } catch(e) {}
+  }
+
   // ── Speech ────────────────────────────────────────────────────────────────
   let speechReady = false;
 
@@ -412,6 +436,7 @@
     if (configured < 999) { configured++; idleNum.textContent = configured; }
   });
   document.getElementById('start-btn').addEventListener('click', () => {
+    getAudioCtx().resume();
     warmSpeech(); startReady();
   });
   document.getElementById('reset-btn').addEventListener('click', reset);
@@ -467,6 +492,7 @@
   }
 
   function tick() {
+    playTick();
     timeRemaining--;
     if (timeRemaining <= 0) {
       clearInterval(tickId);
