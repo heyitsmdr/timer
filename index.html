@@ -532,16 +532,19 @@
     if (phase !== 'countdown' || !paused) return;
     paused = false;
     countdownView.classList.remove('paused');
-    speak(`${timeRemaining} ${timeRemaining === 1 ? 'second' : 'seconds'}`);
-    startTs = performance.now();
-    rafId = requestAnimationFrame(rafLoop);
+    const label = `${timeRemaining} ${timeRemaining === 1 ? 'second' : 'seconds'}`;
+    speakThen(label, () => {
+      if (phase !== 'countdown' || paused) return;
+      startTs = performance.now();
+      rafId = requestAnimationFrame(rafLoop);
 
-    // Fire the next tick at the correct moment then set interval
-    const timeToNextTick = (Math.floor(pausedElapsed) + 1) - pausedElapsed;
-    resumeTickTimer = setTimeout(() => {
-      tick();
-      if (phase === 'countdown') tickId = setInterval(tick, 1000);
-    }, timeToNextTick * 1000);
+      // Fire the next tick at the correct moment then set interval
+      const timeToNextTick = (Math.floor(pausedElapsed) + 1) - pausedElapsed;
+      resumeTickTimer = setTimeout(() => {
+        tick();
+        if (phase === 'countdown') tickId = setInterval(tick, 1000);
+      }, timeToNextTick * 1000);
+    });
   }
 
   // ── Phase: Done ───────────────────────────────────────────────────────────
