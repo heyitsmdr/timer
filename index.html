@@ -516,12 +516,14 @@
     clearTimeout(resumeTickTimer);
     countdownView.classList.add('paused');
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    speak('Paused');
   }
 
   function resumeTimer() {
     if (phase !== 'countdown' || !paused) return;
     paused = false;
     countdownView.classList.remove('paused');
+    speak(`${timeRemaining} ${timeRemaining === 1 ? 'second' : 'seconds'}`);
     startTs = performance.now();
     rafId = requestAnimationFrame(rafLoop);
 
