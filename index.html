@@ -407,6 +407,17 @@
     } catch(e) {}
   }
 
+  function speakThen(text, callback) {
+    if (!window.speechSynthesis) { callback(); return; }
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US'; u.rate = 1.05; u.pitch = 1.0; u.volume = 1.0;
+      u.onend = () => readyId = setTimeout(callback, 300);
+      u.onerror = callback;
+      window.speechSynthesis.speak(u);
+    } catch(e) { callback(); }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
   function showView(name) {
     Object.values(views).forEach(v => v.classList.add('hidden'));
@@ -450,9 +461,7 @@
     updateEdgeLine(0);
     showView('ready');
 
-    speak(`${configured} seconds. Get ready!`);
-
-    readyId = setTimeout(() => {
+    speakThen(`${configured} seconds. Get ready!`, () => {
       let count = 5;
       readyNum.textContent = count;
       readyId = setInterval(() => {
@@ -466,7 +475,7 @@
           startCountdown();
         }
       }, 1000);
-    }, 1000);
+    });
   }
 
   // ── Phase: Countdown ─────────────────────────────────────────────────────
