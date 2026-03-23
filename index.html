@@ -475,7 +475,7 @@
     updateLabel(timeRemaining);
     if (timeRemaining <= 10) punchNum(countdownNum);
     if (timeRemaining <= 10) speak(String(timeRemaining));
-    else if (MILESTONES.has(timeRemaining)) speak(`${timeRemaining} seconds`);
+    else if (MILESTONES.has(timeRemaining)) speak(`${timeRemaining} seconds left`);
   }
 
   // ── Pause / Resume ────────────────────────────────────────────────────────
