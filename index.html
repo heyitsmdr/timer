@@ -425,20 +425,22 @@
     updateEdgeLine(0);
     showView('ready');
 
-    let count = 5;
-    readyNum.textContent = count;
-    speak(`We're doing ${configured} seconds. Get ready!`);
+    speak(`${configured} seconds. Get ready`);
 
-    readyId = setInterval(() => {
-      count--;
-      if (count > 0) {
-        readyNum.textContent = count;
-        punchNum(readyNum);
-        speak(String(count));
-      } else {
-        clearInterval(readyId);
-        startCountdown();
-      }
+    readyId = setTimeout(() => {
+      let count = 5;
+      readyNum.textContent = count;
+      readyId = setInterval(() => {
+        count--;
+        if (count > 0) {
+          readyNum.textContent = count;
+          punchNum(readyNum);
+          speak(String(count));
+        } else {
+          clearInterval(readyId);
+          startCountdown();
+        }
+      }, 1000);
     }, 1000);
   }
 
