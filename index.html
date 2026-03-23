@@ -464,6 +464,7 @@
     speakThen(`${configured} seconds. Get ready!`, () => {
       let count = 5;
       readyNum.textContent = count;
+      speak(String(count));
       readyId = setInterval(() => {
         count--;
         if (count > 0) {
