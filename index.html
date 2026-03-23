@@ -572,6 +572,7 @@
     pressActive = false;
     clearTimeout(pressTimer);
     hideRing();
+    if (e.cancelable) e.preventDefault();
 
     if (pressMoved) return; // was a scroll, not a tap
 
@@ -600,8 +601,8 @@
 
   // Use touch events on mobile, mouse events as fallback
   app.addEventListener('touchstart',  onPressStart, { passive: true });
-  app.addEventListener('touchend',    onPressEnd,   { passive: true });
-  app.addEventListener('touchcancel', onPressEnd,   { passive: true });
+  app.addEventListener('touchend',    onPressEnd);
+  app.addEventListener('touchcancel', onPressEnd);
   app.addEventListener('touchmove',   onPressMove,  { passive: true });
 
   app.addEventListener('mousedown', onPressStart);
