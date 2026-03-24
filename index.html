@@ -49,6 +49,10 @@
       transform: translateY(0%);
       will-change: transform;
       z-index: 0;
+      transition: background 0.4s ease;
+    }
+    #green-panel.paused {
+      background: #555;
     }
 
     /* Thin edge line at the current green boundary */
@@ -303,7 +307,7 @@
 
   <div id="content">
 
-    <div id="git-hash">3e4520b</div>
+    <div id="git-hash">2a002cd</div>
 
     <!-- IDLE -->
     <div id="idle-view">
@@ -544,6 +548,7 @@
     clearInterval(tickId);
     clearTimeout(resumeTickTimer);
     countdownView.classList.add('paused');
+    greenPanel.classList.add('paused');
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     speak('Paused');
   }
@@ -552,6 +557,7 @@
     if (phase !== 'countdown' || !paused) return;
     paused = false;
     countdownView.classList.remove('paused');
+    greenPanel.classList.remove('paused');
     const label = `${timeRemaining} ${timeRemaining === 1 ? 'second' : 'seconds'}`;
     speakThen(label, () => {
       if (phase !== 'countdown' || paused) return;
@@ -592,6 +598,7 @@
     configured = 60;
     idleNum.textContent = configured;
     countdownView.classList.remove('paused');
+    greenPanel.classList.remove('paused');
 
     greenPanel.style.transition = 'none';
     greenPanel.style.transform  = 'translateY(0%)';
