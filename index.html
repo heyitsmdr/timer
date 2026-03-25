@@ -307,7 +307,7 @@
 
   <div id="content">
 
-    <div id="git-hash">7f8f162</div>
+    <div id="git-hash">857d30b</div>
 
     <!-- IDLE -->
     <div id="idle-view">
@@ -371,9 +371,11 @@
   let rafId            = null;
   let tickId               = null;
   let halfTickId           = null;
+  let extraTickId          = null;
   let readyId              = null;
   let resumeTickTimer      = null;
   let resumeHalfTickTimer  = null;
+  let resumeExtraTickTimer = null;
   let startTs          = null;     // performance.now() when current run segment began
 
   const MILESTONES = new Set([60, 50, 40, 30, 20]);
@@ -574,11 +576,30 @@
     timeRemaining--;
     if (timeRemaining <= 0) {
       clearInterval(tickId);
+      clearInterval(halfTickId); halfTickId = null;
+      clearInterval(extraTickId); extraTickId = null;
       finishCountdown();
       return;
     }
     countdownNum.textContent = timeRemaining;
     updateLabel(timeRemaining);
+    if (timeRemaining === 10) {
+      // Switch to double-speed sounds for the last 10 seconds
+      clearInterval(halfTickId); halfTickId = null;
+      clearTimeout(resumeHalfTickTimer);
+      resumeHalfTickTimer = setTimeout(() => {
+        if (phase === 'countdown' && !paused) {
+          playHalfTick();
+          halfTickId = setInterval(playHalfTick, 500);
+        }
+      }, 250);
+      resumeExtraTickTimer = setTimeout(() => {
+        if (phase === 'countdown' && !paused) {
+          playTick();
+          extraTickId = setInterval(playTick, 1000);
+        }
+      }, 500);
+    }
     if (timeRemaining <= 10) punchNum(countdownNum);
     if (timeRemaining <= 10) speak(String(timeRemaining));
     else if (MILESTONES.has(timeRemaining)) speak(`${timeRemaining} seconds left`);
@@ -591,10 +612,11 @@
     pausedElapsed += (performance.now() - startTs) / 1000;
     cancelAnimationFrame(rafId);
     clearInterval(tickId);
-    clearInterval(halfTickId);
-    halfTickId = null;
+    clearInterval(halfTickId); halfTickId = null;
+    clearInterval(extraTickId); extraTickId = null;
     clearTimeout(resumeTickTimer);
     clearTimeout(resumeHalfTickTimer);
+    clearTimeout(resumeExtraTickTimer);
     countdownView.classList.add('paused');
     greenPanel.classList.add('paused');
     if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -618,12 +640,31 @@
         tick();
         if (phase === 'countdown') {
           tickId = setInterval(tick, 1000);
-          resumeHalfTickTimer = setTimeout(() => {
-            if (phase === 'countdown' && !paused) {
-              playHalfTick();
-              halfTickId = setInterval(playHalfTick, 1000);
-            }
-          }, 500);
+          if (timeRemaining === 10) {
+            // tick() just switched to fast mode — sounds already scheduled
+          } else if (timeRemaining < 10) {
+            // Resuming mid-fast-mode — re-sync fast sounds
+            resumeHalfTickTimer = setTimeout(() => {
+              if (phase === 'countdown' && !paused) {
+                playHalfTick();
+                halfTickId = setInterval(playHalfTick, 500);
+              }
+            }, 250);
+            resumeExtraTickTimer = setTimeout(() => {
+              if (phase === 'countdown' && !paused) {
+                playTick();
+                extraTickId = setInterval(playTick, 1000);
+              }
+            }, 500);
+          } else {
+            // Normal mode
+            resumeHalfTickTimer = setTimeout(() => {
+              if (phase === 'countdown' && !paused) {
+                playHalfTick();
+                halfTickId = setInterval(playHalfTick, 1000);
+              }
+            }, 500);
+          }
         }
       }, timeToNextTick * 1000);
     });
@@ -646,12 +687,13 @@
   function reset() {
     phase = 'idle'; paused = false; pausedElapsed = 0;
     clearInterval(tickId);
-    clearInterval(halfTickId);
-    halfTickId = null;
+    clearInterval(halfTickId); halfTickId = null;
+    clearInterval(extraTickId); extraTickId = null;
     clearInterval(readyId);
     cancelAnimationFrame(rafId);
     clearTimeout(resumeTickTimer);
     clearTimeout(resumeHalfTickTimer);
+    clearTimeout(resumeExtraTickTimer);
     if (window.speechSynthesis) window.speechSynthesis.cancel();
 
     configured = 60;
