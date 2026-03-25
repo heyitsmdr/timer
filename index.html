@@ -307,7 +307,7 @@
 
   <div id="content">
 
-    <div id="git-hash">22a29ee</div>
+    <div id="git-hash">7f8f162</div>
 
     <!-- IDLE -->
     <div id="idle-view">
@@ -369,9 +369,11 @@
   let paused           = false;
   let pausedElapsed    = 0;        // seconds elapsed before current run segment
   let rafId            = null;
-  let tickId           = null;
-  let readyId          = null;
-  let resumeTickTimer  = null;
+  let tickId               = null;
+  let halfTickId           = null;
+  let readyId              = null;
+  let resumeTickTimer      = null;
+  let resumeHalfTickTimer  = null;
   let startTs          = null;     // performance.now() when current run segment began
 
   const MILESTONES = new Set([60, 50, 40, 30, 20]);
@@ -413,6 +415,22 @@
       osc.type = 'sine';
       osc.frequency.setValueAtTime(1200, ctx.currentTime);
       gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.04);
+    } catch(e) {}
+  }
+
+  function playHalfTick() {
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.04);
@@ -534,6 +552,12 @@
     startTs = performance.now();
     rafId = requestAnimationFrame(rafLoop);
     tickId = setInterval(tick, 1000);
+    resumeHalfTickTimer = setTimeout(() => {
+      if (phase === 'countdown' && !paused) {
+        playHalfTick();
+        halfTickId = setInterval(playHalfTick, 1000);
+      }
+    }, 500);
   }
 
   function rafLoop() {
@@ -567,7 +591,10 @@
     pausedElapsed += (performance.now() - startTs) / 1000;
     cancelAnimationFrame(rafId);
     clearInterval(tickId);
+    clearInterval(halfTickId);
+    halfTickId = null;
     clearTimeout(resumeTickTimer);
+    clearTimeout(resumeHalfTickTimer);
     countdownView.classList.add('paused');
     greenPanel.classList.add('paused');
     if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -589,7 +616,15 @@
       const timeToNextTick = (Math.floor(pausedElapsed) + 1) - pausedElapsed;
       resumeTickTimer = setTimeout(() => {
         tick();
-        if (phase === 'countdown') tickId = setInterval(tick, 1000);
+        if (phase === 'countdown') {
+          tickId = setInterval(tick, 1000);
+          resumeHalfTickTimer = setTimeout(() => {
+            if (phase === 'countdown' && !paused) {
+              playHalfTick();
+              halfTickId = setInterval(playHalfTick, 1000);
+            }
+          }, 500);
+        }
       }, timeToNextTick * 1000);
     });
   }
@@ -611,9 +646,12 @@
   function reset() {
     phase = 'idle'; paused = false; pausedElapsed = 0;
     clearInterval(tickId);
+    clearInterval(halfTickId);
+    halfTickId = null;
     clearInterval(readyId);
     cancelAnimationFrame(rafId);
     clearTimeout(resumeTickTimer);
+    clearTimeout(resumeHalfTickTimer);
     if (window.speechSynthesis) window.speechSynthesis.cancel();
 
     configured = 60;
