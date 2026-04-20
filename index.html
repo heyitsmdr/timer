@@ -1,788 +1,926 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Timer</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after {
-      margin: 0; padding: 0; box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
-      touch-action: manipulation;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-    }
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, user-scalable=no"
+        />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+            name="apple-mobile-web-app-status-bar-style"
+            content="black-translucent"
+        />
+        <title>Timer</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            *,
+            *::before,
+            *::after {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+                touch-action: manipulation;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
 
-    :root {
-      --green: #27c76a;
-      --dark: #0e0e0e;
-      --text: #ffffff;
-    }
+            :root {
+                --green: #27c76a;
+                --dark: #0e0e0e;
+                --text: #ffffff;
+            }
 
-    html, body {
-      width: 100%; height: 100%;
-      overflow: hidden;
-      background: var(--dark);
-      font-family: 'Barlow', sans-serif;
-    }
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                background: var(--dark);
+                font-family: "Barlow", sans-serif;
+            }
 
-    #app {
-      position: relative;
-      width: 100%; height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+            #app {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
 
-    /* ── The sliding green background ── */
-    #green-panel {
-      position: absolute;
-      inset: 0;
-      background: var(--green);
-      transform: translateY(0%);
-      will-change: transform;
-      z-index: 0;
-      transition: background 0.4s ease;
-    }
-    #green-panel.paused {
-      background: #555;
-    }
+            /* ── The sliding green background ── */
+            #green-panel {
+                position: absolute;
+                inset: 0;
+                background: var(--green);
+                transform: translateY(0%);
+                will-change: transform;
+                z-index: 0;
+                transition: background 0.4s ease;
+            }
+            #green-panel.paused {
+                background: #555;
+            }
 
-    /* Thin edge line at the current green boundary */
-    #edge-line {
-      position: absolute;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: rgba(255,255,255,0.35);
-      z-index: 1;
-      pointer-events: none;
-      top: 0%;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
+            /* Thin edge line at the current green boundary */
+            #edge-line {
+                position: absolute;
+                left: 0;
+                width: 100%;
+                height: 2px;
+                background: rgba(255, 255, 255, 0.35);
+                z-index: 1;
+                pointer-events: none;
+                top: 0%;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
 
-    /* ── Content layer ── */
-    #content {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-      padding: max(40px, env(safe-area-inset-top)) 32px
-               max(40px, env(safe-area-inset-bottom)) 32px;
-    }
+            /* ── Content layer ── */
+            #content {
+                position: relative;
+                z-index: 2;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                padding: max(40px, env(safe-area-inset-top)) 32px
+                    max(40px, env(safe-area-inset-bottom)) 32px;
+            }
 
-    /* ── Number display ── */
-    .big-num {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(100px, 50vw, 220px);
-      line-height: 0.88;
-      color: var(--text);
-      letter-spacing: 1px;
-    }
+            /* ── Number display ── */
+            .big-num {
+                font-family: "Bebas Neue", sans-serif;
+                font-size: clamp(100px, 50vw, 220px);
+                line-height: 0.88;
+                color: var(--text);
+                letter-spacing: 1px;
+            }
 
-    .small-label {
-      font-family: 'Barlow', sans-serif;
-      font-weight: 300;
-      font-size: 12px;
-      letter-spacing: 0.4em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.5);
-      margin-top: 10px;
-    }
+            .small-label {
+                font-family: "Barlow", sans-serif;
+                font-weight: 300;
+                font-size: 12px;
+                letter-spacing: 0.4em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.5);
+                margin-top: 10px;
+            }
 
-    /* ── IDLE VIEW ── */
-    #idle-view {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+            /* ── IDLE VIEW ── */
+            #idle-view {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
 
-    #git-hash {
-      position: fixed;
-      bottom: max(16px, env(safe-area-inset-bottom));
-      left: 0;
-      width: 100%;
-      text-align: center;
-      font-family: 'Barlow', sans-serif;
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.2);
-      pointer-events: none;
-    }
+            #git-hash {
+                position: fixed;
+                bottom: max(16px, env(safe-area-inset-bottom));
+                left: 0;
+                width: 100%;
+                text-align: center;
+                font-family: "Barlow", sans-serif;
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                color: rgba(255, 255, 255, 0.2);
+                pointer-events: none;
+            }
 
-    .adj-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 30px;
-    }
+            .adj-row {
+                display: flex;
+                gap: 10px;
+                margin-top: 30px;
+            }
 
-    .adj-btn {
-      font-family: 'Barlow', sans-serif;
-      font-weight: 400;
-      font-size: 14px;
-      letter-spacing: 0.06em;
-      color: var(--text);
-      background: rgba(255,255,255,0.1);
-      border: 1.5px solid rgba(255,255,255,0.18);
-      border-radius: 100px;
-      padding: 10px 24px;
-      cursor: pointer;
-      transition: background 0.1s;
-    }
-    .adj-btn:active { background: rgba(255,255,255,0.25); }
+            .adj-btn {
+                font-family: "Barlow", sans-serif;
+                font-weight: 400;
+                font-size: 14px;
+                letter-spacing: 0.06em;
+                color: var(--text);
+                background: rgba(255, 255, 255, 0.1);
+                border: 1.5px solid rgba(255, 255, 255, 0.18);
+                border-radius: 100px;
+                padding: 10px 24px;
+                cursor: pointer;
+                transition: background 0.1s;
+            }
+            .adj-btn:active {
+                background: rgba(255, 255, 255, 0.25);
+            }
 
-    .start-btn {
-      font-family: 'Barlow', sans-serif;
-      font-weight: 400;
-      font-size: 15px;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: #0e0e0e;
-      background: #fff;
-      border: none;
-      border-radius: 100px;
-      padding: 15px 58px;
-      margin-top: 36px;
-      cursor: pointer;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.25);
-      transition: transform 0.1s, opacity 0.1s;
-    }
-    .start-btn:active { transform: scale(0.96); opacity: 0.85; }
+            .start-btn {
+                font-family: "Barlow", sans-serif;
+                font-weight: 400;
+                font-size: 15px;
+                letter-spacing: 0.25em;
+                text-transform: uppercase;
+                color: #0e0e0e;
+                background: #fff;
+                border: none;
+                border-radius: 100px;
+                padding: 15px 58px;
+                margin-top: 36px;
+                cursor: pointer;
+                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+                transition:
+                    transform 0.1s,
+                    opacity 0.1s;
+            }
+            .start-btn:active {
+                transform: scale(0.96);
+                opacity: 0.85;
+            }
 
-    /* ── GET READY VIEW ── */
-    #ready-view {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .get-ready-label {
-      font-weight: 300;
-      font-size: 12px;
-      letter-spacing: 0.45em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.5);
-      margin-bottom: 12px;
-    }
+            /* ── GET READY VIEW ── */
+            #ready-view {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .get-ready-label {
+                font-weight: 300;
+                font-size: 12px;
+                letter-spacing: 0.45em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.5);
+                margin-bottom: 12px;
+            }
 
-    /* ── COUNTDOWN VIEW ── */
-    #countdown-view {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+            /* ── COUNTDOWN VIEW ── */
+            #countdown-view {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
 
-    /* Paused state: dim the number */
-    #countdown-view.paused .big-num,
-    #countdown-view.paused #countdown-label {
-      opacity: 0.35;
-      transition: opacity 0.2s;
-    }
+            /* Paused state: dim the number */
+            #countdown-view.paused .big-num,
+            #countdown-view.paused #countdown-label {
+                opacity: 0.35;
+                transition: opacity 0.2s;
+            }
 
-    #pause-hint {
-      font-size: 11px;
-      letter-spacing: 0.5em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.5);
-      margin-top: 18px;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    #countdown-view.paused #pause-hint { opacity: 1; }
+            #pause-hint {
+                font-size: 11px;
+                letter-spacing: 0.5em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.5);
+                margin-top: 18px;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+            #countdown-view.paused #pause-hint {
+                opacity: 1;
+            }
 
-    /* ── Long-press ring ── */
-    #lp-ring {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 50;
-      opacity: 0;
-      transition: opacity 0.12s;
-    }
-    #lp-ring.show { opacity: 1; }
-    .ring-track { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 4; }
-    .ring-fill  {
-      fill: none;
-      stroke: rgba(255,255,255,0.75);
-      stroke-width: 4;
-      stroke-linecap: round;
-      /* circumference of r=40: 2π×40 ≈ 251.3 */
-      stroke-dasharray: 251.3;
-      stroke-dashoffset: 251.3;
-      transform-origin: 50px 50px;
-      transform: rotate(-90deg);
-      transition: stroke-dashoffset 0.6s linear;
-    }
-    #lp-ring.filling .ring-fill { stroke-dashoffset: 0; }
+            /* ── Long-press ring ── */
+            #lp-ring {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                pointer-events: none;
+                z-index: 50;
+                opacity: 0;
+                transition: opacity 0.12s;
+            }
+            #lp-ring.show {
+                opacity: 1;
+            }
+            .ring-track {
+                fill: none;
+                stroke: rgba(255, 255, 255, 0.15);
+                stroke-width: 4;
+            }
+            .ring-fill {
+                fill: none;
+                stroke: rgba(255, 255, 255, 0.75);
+                stroke-width: 4;
+                stroke-linecap: round;
+                /* circumference of r=40: 2π×40 ≈ 251.3 */
+                stroke-dasharray: 251.3;
+                stroke-dashoffset: 251.3;
+                transform-origin: 50px 50px;
+                transform: rotate(-90deg);
+                transition: stroke-dashoffset 0.6s linear;
+            }
+            #lp-ring.filling .ring-fill {
+                stroke-dashoffset: 0;
+            }
 
-    /* ── DONE VIEW ── */
-    #done-view {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 36px;
-    }
+            /* ── DONE VIEW ── */
+            #done-view {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 36px;
+            }
 
-    .reset-btn {
-      font-family: 'Barlow', sans-serif;
-      font-weight: 300;
-      font-size: 12px;
-      letter-spacing: 0.35em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.5);
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 100px;
-      padding: 12px 36px;
-      cursor: pointer;
-      transition: all 0.12s;
-    }
-    .reset-btn:active { background: rgba(255,255,255,0.08); }
+            .reset-btn {
+                font-family: "Barlow", sans-serif;
+                font-weight: 300;
+                font-size: 12px;
+                letter-spacing: 0.35em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.5);
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 100px;
+                padding: 12px 36px;
+                cursor: pointer;
+                transition: all 0.12s;
+            }
+            .reset-btn:active {
+                background: rgba(255, 255, 255, 0.08);
+            }
 
-    /* ── Animations ── */
-    .hidden { display: none !important; }
+            /* ── Animations ── */
+            .hidden {
+                display: none !important;
+            }
 
-    @keyframes punchIn {
-      0%   { transform: scale(1.18); opacity: 0; }
-      60%  { transform: scale(0.97); }
-      100% { transform: scale(1);    opacity: 1; }
-    }
-    .punch { animation: punchIn 0.22s ease-out; }
+            @keyframes punchIn {
+                0% {
+                    transform: scale(1.18);
+                    opacity: 0;
+                }
+                60% {
+                    transform: scale(0.97);
+                }
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+            .punch {
+                animation: punchIn 0.22s ease-out;
+            }
 
-    @keyframes flashFade {
-      0%   { opacity: 0.85; }
-      100% { opacity: 0; }
-    }
-    #flash-overlay {
-      position: fixed;
-      inset: 0;
-      background: white;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 99;
-    }
-    .do-flash { animation: flashFade 0.55s ease-out forwards; }
+            @keyframes flashFade {
+                0% {
+                    opacity: 0.85;
+                }
+                100% {
+                    opacity: 0;
+                }
+            }
+            #flash-overlay {
+                position: fixed;
+                inset: 0;
+                background: white;
+                opacity: 0;
+                pointer-events: none;
+                z-index: 99;
+            }
+            .do-flash {
+                animation: flashFade 0.55s ease-out forwards;
+            }
 
-    @keyframes stopAppear {
-      0%   { letter-spacing: 0.3em; opacity: 0; transform: scale(1.1); }
-      100% { letter-spacing: 2px;   opacity: 1; transform: scale(1);   }
-    }
-    .stop-word {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(90px, 46vw, 200px);
-      line-height: 0.88;
-      color: var(--text);
-      letter-spacing: 2px;
-      animation: stopAppear 0.35s ease-out;
-    }
-  </style>
-</head>
-<body>
-<div id="app">
-  <div id="green-panel"></div>
-  <div id="edge-line"></div>
-  <div id="flash-overlay"></div>
+            @keyframes stopAppear {
+                0% {
+                    letter-spacing: 0.3em;
+                    opacity: 0;
+                    transform: scale(1.1);
+                }
+                100% {
+                    letter-spacing: 2px;
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+            .stop-word {
+                font-family: "Bebas Neue", sans-serif;
+                font-size: clamp(90px, 46vw, 200px);
+                line-height: 0.88;
+                color: var(--text);
+                letter-spacing: 2px;
+                animation: stopAppear 0.35s ease-out;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <div id="green-panel"></div>
+            <div id="edge-line"></div>
+            <div id="flash-overlay"></div>
 
-  <!-- Long-press ring indicator -->
-  <div id="lp-ring">
-    <svg viewBox="0 0 100 100" width="96" height="96">
-      <circle class="ring-track" cx="50" cy="50" r="40"/>
-      <circle class="ring-fill"  cx="50" cy="50" r="40"/>
-    </svg>
-  </div>
+            <!-- Long-press ring indicator -->
+            <div id="lp-ring">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                    <circle class="ring-track" cx="50" cy="50" r="40" />
+                    <circle class="ring-fill" cx="50" cy="50" r="40" />
+                </svg>
+            </div>
 
-  <div id="content">
+            <div id="content">
+                <div id="git-hash">4a702fa</div>
 
-    <div id="git-hash">857d30b</div>
+                <!-- IDLE -->
+                <div id="idle-view">
+                    <div class="big-num" id="idle-num">60</div>
+                    <div class="small-label">seconds</div>
+                    <div class="adj-row">
+                        <button class="adj-btn" id="minus-btn">− 1s</button>
+                        <button class="adj-btn" id="plus-btn">+ 1s</button>
+                    </div>
+                    <button class="start-btn" id="start-btn">Start</button>
+                </div>
 
-    <!-- IDLE -->
-    <div id="idle-view">
-      <div class="big-num" id="idle-num">60</div>
-      <div class="small-label">seconds</div>
-      <div class="adj-row">
-        <button class="adj-btn" id="minus-btn">− 1s</button>
-        <button class="adj-btn" id="plus-btn">+ 1s</button>
-      </div>
-      <button class="start-btn" id="start-btn">Start</button>
-    </div>
+                <!-- GET READY -->
+                <div id="ready-view" class="hidden">
+                    <div class="get-ready-label">get ready</div>
+                    <div class="big-num" id="ready-num">5</div>
+                </div>
 
-    <!-- GET READY -->
-    <div id="ready-view" class="hidden">
-      <div class="get-ready-label">get ready</div>
-      <div class="big-num" id="ready-num">5</div>
-    </div>
+                <!-- COUNTDOWN -->
+                <div id="countdown-view" class="hidden">
+                    <div class="big-num" id="countdown-num">60</div>
+                    <div class="small-label" id="countdown-label">seconds</div>
+                    <div id="pause-hint">paused</div>
+                </div>
 
-    <!-- COUNTDOWN -->
-    <div id="countdown-view" class="hidden">
-      <div class="big-num" id="countdown-num">60</div>
-      <div class="small-label" id="countdown-label">seconds</div>
-      <div id="pause-hint">paused</div>
-    </div>
+                <!-- DONE -->
+                <div id="done-view" class="hidden">
+                    <div class="stop-word">Stop!</div>
+                    <button class="reset-btn" id="reset-btn">Reset</button>
+                </div>
+            </div>
+        </div>
 
-    <!-- DONE -->
-    <div id="done-view" class="hidden">
-      <div class="stop-word">Stop!</div>
-      <button class="reset-btn" id="reset-btn">Reset</button>
-    </div>
+        <script>
+            // ── Elements ──────────────────────────────────────────────────────────────
+            const app = document.getElementById("app");
+            const greenPanel = document.getElementById("green-panel");
+            const edgeLine = document.getElementById("edge-line");
+            const flashOverlay = document.getElementById("flash-overlay");
+            const lpRing = document.getElementById("lp-ring");
+            const countdownView = document.getElementById("countdown-view");
+            const views = {
+                idle: document.getElementById("idle-view"),
+                ready: document.getElementById("ready-view"),
+                countdown: countdownView,
+                done: document.getElementById("done-view"),
+            };
+            const idleNum = document.getElementById("idle-num");
+            // Reflect persisted value in the idle display immediately
+            document.getElementById("idle-num").textContent =
+                parseInt(localStorage.getItem("timer_configured"), 10) || 60;
+            const readyNum = document.getElementById("ready-num");
+            const countdownNum = document.getElementById("countdown-num");
+            const countdownLbl = document.getElementById("countdown-label");
 
-  </div>
-</div>
+            // ── State ─────────────────────────────────────────────────────────────────
+            const STORAGE_KEY = "timer_configured";
+            let configured =
+                parseInt(localStorage.getItem(STORAGE_KEY), 10) || 60;
+            let totalTime = 60;
+            let timeRemaining = 60;
+            let phase = "idle"; // idle | ready | countdown | done
+            let paused = false;
+            let pausedElapsed = 0; // seconds elapsed before current run segment
+            let rafId = null;
+            let tickId = null;
+            let halfTickId = null;
+            let extraTickId = null;
+            let readyId = null;
+            let resumeTickTimer = null;
+            let resumeHalfTickTimer = null;
+            let resumeExtraTickTimer = null;
+            let startTs = null; // performance.now() when current run segment began
 
-<script>
-  // ── Elements ──────────────────────────────────────────────────────────────
-  const app            = document.getElementById('app');
-  const greenPanel     = document.getElementById('green-panel');
-  const edgeLine       = document.getElementById('edge-line');
-  const flashOverlay   = document.getElementById('flash-overlay');
-  const lpRing         = document.getElementById('lp-ring');
-  const countdownView  = document.getElementById('countdown-view');
-  const views = {
-    idle:      document.getElementById('idle-view'),
-    ready:     document.getElementById('ready-view'),
-    countdown: countdownView,
-    done:      document.getElementById('done-view'),
-  };
-  const idleNum       = document.getElementById('idle-num');
-  const readyNum      = document.getElementById('ready-num');
-  const countdownNum  = document.getElementById('countdown-num');
-  const countdownLbl  = document.getElementById('countdown-label');
+            const MILESTONES = new Set([60, 50, 40, 30, 20]);
+            const LONG_PRESS_MS = 600;
 
-  // ── State ─────────────────────────────────────────────────────────────────
-  let configured       = 60;
-  let totalTime        = 60;
-  let timeRemaining    = 60;
-  let phase            = 'idle';   // idle | ready | countdown | done
-  let paused           = false;
-  let pausedElapsed    = 0;        // seconds elapsed before current run segment
-  let rafId            = null;
-  let tickId               = null;
-  let halfTickId           = null;
-  let extraTickId          = null;
-  let readyId              = null;
-  let resumeTickTimer      = null;
-  let resumeHalfTickTimer  = null;
-  let resumeExtraTickTimer = null;
-  let startTs          = null;     // performance.now() when current run segment began
+            // ── Tick sound ────────────────────────────────────────────────────────────
+            let audioCtx = null;
 
-  const MILESTONES = new Set([60, 50, 40, 30, 20]);
-  const LONG_PRESS_MS = 600;
+            function getAudioCtx() {
+                if (!audioCtx)
+                    audioCtx = new (
+                        window.AudioContext || window.webkitAudioContext
+                    )();
+                return audioCtx;
+            }
 
-  // ── Tick sound ────────────────────────────────────────────────────────────
-  let audioCtx = null;
+            function playClick() {
+                try {
+                    const ctx = getAudioCtx();
+                    const buf = ctx.createBuffer(
+                        1,
+                        ctx.sampleRate * 0.03,
+                        ctx.sampleRate,
+                    );
+                    const data = buf.getChannelData(0);
+                    for (let i = 0; i < data.length; i++) {
+                        data[i] =
+                            (Math.random() * 2 - 1) *
+                            Math.pow(1 - i / data.length, 8);
+                    }
+                    const src = ctx.createBufferSource();
+                    src.buffer = buf;
+                    const gain = ctx.createGain();
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    src.connect(gain);
+                    gain.connect(ctx.destination);
+                    src.start();
+                } catch (e) {}
+            }
 
-  function getAudioCtx() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    return audioCtx;
-  }
+            function playTick() {
+                try {
+                    const ctx = getAudioCtx();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(
+                        0.0001,
+                        ctx.currentTime + 0.04,
+                    );
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.04);
+                } catch (e) {}
+            }
 
-  function playClick() {
-    try {
-      const ctx = getAudioCtx();
-      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.03, ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 8);
-      }
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      src.connect(gain);
-      gain.connect(ctx.destination);
-      src.start();
-    } catch(e) {}
-  }
+            function playHalfTick() {
+                try {
+                    const ctx = getAudioCtx();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(800, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(
+                        0.0001,
+                        ctx.currentTime + 0.04,
+                    );
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.04);
+                } catch (e) {}
+            }
 
-  function playTick() {
-    try {
-      const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1200, ctx.currentTime);
-      gain.gain.setValueAtTime(0.35, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.04);
-    } catch(e) {}
-  }
+            // ── Speech ────────────────────────────────────────────────────────────────
+            let speechReady = false;
 
-  function playHalfTick() {
-    try {
-      const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, ctx.currentTime);
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.04);
-    } catch(e) {}
-  }
+            function warmSpeech() {
+                if (!window.speechSynthesis || speechReady) return;
+                if (speechSynthesis.getVoices().length === 0) {
+                    speechSynthesis.onvoiceschanged = () => {
+                        speechReady = true;
+                    };
+                } else {
+                    speechReady = true;
+                }
+                const u = new SpeechSynthesisUtterance("\u200B");
+                u.volume = 0;
+                window.speechSynthesis.speak(u);
+                speechReady = true;
+            }
 
-  // ── Speech ────────────────────────────────────────────────────────────────
-  let speechReady = false;
+            function speak(text) {
+                if (!window.speechSynthesis) return;
+                try {
+                    const u = new SpeechSynthesisUtterance(text);
+                    u.lang = "en-US";
+                    u.rate = 1.05;
+                    u.pitch = 1.0;
+                    u.volume = 1.0;
+                    window.speechSynthesis.speak(u);
+                } catch (e) {}
+            }
 
-  function warmSpeech() {
-    if (!window.speechSynthesis || speechReady) return;
-    if (speechSynthesis.getVoices().length === 0) {
-      speechSynthesis.onvoiceschanged = () => { speechReady = true; };
-    } else {
-      speechReady = true;
-    }
-    const u = new SpeechSynthesisUtterance('\u200B');
-    u.volume = 0;
-    window.speechSynthesis.speak(u);
-    speechReady = true;
-  }
+            function speakThen(text, callback) {
+                if (!window.speechSynthesis) {
+                    callback();
+                    return;
+                }
+                try {
+                    const u = new SpeechSynthesisUtterance(text);
+                    u.lang = "en-US";
+                    u.rate = 1.05;
+                    u.pitch = 1.0;
+                    u.volume = 1.0;
+                    u.onend = () => (readyId = setTimeout(callback, 300));
+                    u.onerror = callback;
+                    window.speechSynthesis.speak(u);
+                } catch (e) {
+                    callback();
+                }
+            }
 
-  function speak(text) {
-    if (!window.speechSynthesis) return;
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US'; u.rate = 1.05; u.pitch = 1.0; u.volume = 1.0;
-      window.speechSynthesis.speak(u);
-    } catch(e) {}
-  }
+            // ── Helpers ───────────────────────────────────────────────────────────────
+            const gitHash = document.getElementById("git-hash");
 
-  function speakThen(text, callback) {
-    if (!window.speechSynthesis) { callback(); return; }
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US'; u.rate = 1.05; u.pitch = 1.0; u.volume = 1.0;
-      u.onend = () => readyId = setTimeout(callback, 300);
-      u.onerror = callback;
-      window.speechSynthesis.speak(u);
-    } catch(e) { callback(); }
-  }
+            function showView(name) {
+                Object.values(views).forEach((v) => v.classList.add("hidden"));
+                views[name].classList.remove("hidden");
+                gitHash.style.display = name === "idle" ? "" : "none";
+            }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const gitHash = document.getElementById('git-hash');
+            function punchNum(el) {
+                el.classList.remove("punch");
+                void el.offsetWidth;
+                el.classList.add("punch");
+            }
 
-  function showView(name) {
-    Object.values(views).forEach(v => v.classList.add('hidden'));
-    views[name].classList.remove('hidden');
-    gitHash.style.display = name === 'idle' ? '' : 'none';
-  }
+            function updateLabel(t) {
+                countdownLbl.textContent = t === 1 ? "second" : "seconds";
+            }
 
-  function punchNum(el) {
-    el.classList.remove('punch');
-    void el.offsetWidth;
-    el.classList.add('punch');
-  }
+            function updateEdgeLine(progress) {
+                edgeLine.style.top = (1 - progress) * 100 + "%";
+                edgeLine.style.opacity =
+                    progress > 0.01 && progress < 0.99 ? "1" : "0";
+            }
 
-  function updateLabel(t) {
-    countdownLbl.textContent = t === 1 ? 'second' : 'seconds';
-  }
+            // ── Button handlers ───────────────────────────────────────────────────────
+            document
+                .getElementById("minus-btn")
+                .addEventListener("click", () => {
+                    if (configured > 5) {
+                        configured--;
+                        idleNum.textContent = configured;
+                        localStorage.setItem(STORAGE_KEY, configured);
+                    }
+                    playClick();
+                });
+            document
+                .getElementById("plus-btn")
+                .addEventListener("click", () => {
+                    if (configured < 999) {
+                        configured++;
+                        idleNum.textContent = configured;
+                        localStorage.setItem(STORAGE_KEY, configured);
+                    }
+                    playClick();
+                });
+            document
+                .getElementById("start-btn")
+                .addEventListener("click", () => {
+                    getAudioCtx().resume();
+                    playClick();
+                    warmSpeech();
+                    startReady();
+                });
+            document
+                .getElementById("reset-btn")
+                .addEventListener("click", reset);
 
-  function updateEdgeLine(progress) {
-    edgeLine.style.top     = ((1 - progress) * 100) + '%';
-    edgeLine.style.opacity = (progress > 0.01 && progress < 0.99) ? '1' : '0';
-  }
+            // ── Phase: Get Ready ──────────────────────────────────────────────────────
+            function startReady() {
+                phase = "ready";
+                totalTime = configured;
+                timeRemaining = configured;
+                pausedElapsed = 0;
+                paused = false;
+                greenPanel.style.transition = "none";
+                greenPanel.style.transform = "translateY(0%)";
+                updateEdgeLine(0);
+                showView("ready");
 
-  // ── Button handlers ───────────────────────────────────────────────────────
-  document.getElementById('minus-btn').addEventListener('click', () => {
-    if (configured > 5) { configured--; idleNum.textContent = configured; }
-    playClick();
-  });
-  document.getElementById('plus-btn').addEventListener('click', () => {
-    if (configured < 999) { configured++; idleNum.textContent = configured; }
-    playClick();
-  });
-  document.getElementById('start-btn').addEventListener('click', () => {
-    getAudioCtx().resume();
-    playClick();
-    warmSpeech(); startReady();
-  });
-  document.getElementById('reset-btn').addEventListener('click', reset);
+                speakThen(`${configured} seconds. Get ready!`, () => {
+                    let count = 5;
+                    readyNum.textContent = count;
+                    speak(String(count));
+                    readyId = setInterval(() => {
+                        count--;
+                        if (count > 0) {
+                            readyNum.textContent = count;
+                            punchNum(readyNum);
+                            speak(String(count));
+                        } else {
+                            clearInterval(readyId);
+                            speak("Go!");
+                            startCountdown();
+                        }
+                    }, 1000);
+                });
+            }
 
-  // ── Phase: Get Ready ──────────────────────────────────────────────────────
-  function startReady() {
-    phase = 'ready'; totalTime = configured; timeRemaining = configured;
-    pausedElapsed = 0; paused = false;
-    greenPanel.style.transition = 'none';
-    greenPanel.style.transform  = 'translateY(0%)';
-    updateEdgeLine(0);
-    showView('ready');
+            // ── Phase: Countdown ─────────────────────────────────────────────────────
+            function startCountdown() {
+                phase = "countdown";
+                paused = false;
+                showView("countdown");
+                countdownNum.textContent = timeRemaining;
+                updateLabel(timeRemaining);
+                countdownView.classList.remove("paused");
 
-    speakThen(`${configured} seconds. Get ready!`, () => {
-      let count = 5;
-      readyNum.textContent = count;
-      speak(String(count));
-      readyId = setInterval(() => {
-        count--;
-        if (count > 0) {
-          readyNum.textContent = count;
-          punchNum(readyNum);
-          speak(String(count));
-        } else {
-          clearInterval(readyId);
-          speak('Go!');
-          startCountdown();
-        }
-      }, 1000);
-    });
-  }
+                startTs = performance.now();
+                rafId = requestAnimationFrame(rafLoop);
+                tickId = setInterval(tick, 1000);
+                resumeHalfTickTimer = setTimeout(() => {
+                    if (phase === "countdown" && !paused) {
+                        playHalfTick();
+                        halfTickId = setInterval(playHalfTick, 1000);
+                    }
+                }, 500);
+            }
 
-  // ── Phase: Countdown ─────────────────────────────────────────────────────
-  function startCountdown() {
-    phase = 'countdown'; paused = false;
-    showView('countdown');
-    countdownNum.textContent = timeRemaining;
-    updateLabel(timeRemaining);
-    countdownView.classList.remove('paused');
+            function rafLoop() {
+                if (phase !== "countdown" || paused) return;
+                const elapsed =
+                    pausedElapsed + (performance.now() - startTs) / 1000;
+                const progress = Math.min(elapsed / totalTime, 1);
+                greenPanel.style.transform = `translateY(${-progress * 100}%)`;
+                updateEdgeLine(progress);
+                if (progress < 1) rafId = requestAnimationFrame(rafLoop);
+            }
 
-    startTs = performance.now();
-    rafId = requestAnimationFrame(rafLoop);
-    tickId = setInterval(tick, 1000);
-    resumeHalfTickTimer = setTimeout(() => {
-      if (phase === 'countdown' && !paused) {
-        playHalfTick();
-        halfTickId = setInterval(playHalfTick, 1000);
-      }
-    }, 500);
-  }
-
-  function rafLoop() {
-    if (phase !== 'countdown' || paused) return;
-    const elapsed  = pausedElapsed + (performance.now() - startTs) / 1000;
-    const progress = Math.min(elapsed / totalTime, 1);
-    greenPanel.style.transform = `translateY(${-progress * 100}%)`;
-    updateEdgeLine(progress);
-    if (progress < 1) rafId = requestAnimationFrame(rafLoop);
-  }
-
-  function tick() {
-    playTick();
-    timeRemaining--;
-    if (timeRemaining <= 0) {
-      clearInterval(tickId);
-      clearInterval(halfTickId); halfTickId = null;
-      clearInterval(extraTickId); extraTickId = null;
-      finishCountdown();
-      return;
-    }
-    countdownNum.textContent = timeRemaining;
-    updateLabel(timeRemaining);
-    if (timeRemaining === 10) {
-      // Switch to double-speed sounds for the last 10 seconds
-      clearInterval(halfTickId); halfTickId = null;
-      clearTimeout(resumeHalfTickTimer);
-      resumeHalfTickTimer = setTimeout(() => {
-        if (phase === 'countdown' && !paused) {
-          playHalfTick();
-          halfTickId = setInterval(playHalfTick, 500);
-        }
-      }, 250);
-      resumeExtraTickTimer = setTimeout(() => {
-        if (phase === 'countdown' && !paused) {
-          playTick();
-          extraTickId = setInterval(playTick, 1000);
-        }
-      }, 500);
-    }
-    if (timeRemaining <= 10) punchNum(countdownNum);
-    if (timeRemaining <= 10) speak(String(timeRemaining));
-    else if (MILESTONES.has(timeRemaining)) speak(`${timeRemaining} seconds left`);
-  }
-
-  // ── Pause / Resume ────────────────────────────────────────────────────────
-  function pauseTimer() {
-    if (phase !== 'countdown' || paused) return;
-    paused = true;
-    pausedElapsed += (performance.now() - startTs) / 1000;
-    cancelAnimationFrame(rafId);
-    clearInterval(tickId);
-    clearInterval(halfTickId); halfTickId = null;
-    clearInterval(extraTickId); extraTickId = null;
-    clearTimeout(resumeTickTimer);
-    clearTimeout(resumeHalfTickTimer);
-    clearTimeout(resumeExtraTickTimer);
-    countdownView.classList.add('paused');
-    greenPanel.classList.add('paused');
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    speak('Paused');
-  }
-
-  function resumeTimer() {
-    if (phase !== 'countdown' || !paused) return;
-    paused = false;
-    countdownView.classList.remove('paused');
-    greenPanel.classList.remove('paused');
-    const label = `${timeRemaining} ${timeRemaining === 1 ? 'second' : 'seconds'}`;
-    speakThen(label, () => {
-      if (phase !== 'countdown' || paused) return;
-      startTs = performance.now();
-      rafId = requestAnimationFrame(rafLoop);
-
-      // Fire the next tick at the correct moment then set interval
-      const timeToNextTick = (Math.floor(pausedElapsed) + 1) - pausedElapsed;
-      resumeTickTimer = setTimeout(() => {
-        tick();
-        if (phase === 'countdown') {
-          tickId = setInterval(tick, 1000);
-          if (timeRemaining === 10) {
-            // tick() just switched to fast mode — sounds already scheduled
-          } else if (timeRemaining < 10) {
-            // Resuming mid-fast-mode — re-sync fast sounds
-            resumeHalfTickTimer = setTimeout(() => {
-              if (phase === 'countdown' && !paused) {
-                playHalfTick();
-                halfTickId = setInterval(playHalfTick, 500);
-              }
-            }, 250);
-            resumeExtraTickTimer = setTimeout(() => {
-              if (phase === 'countdown' && !paused) {
+            function tick() {
                 playTick();
-                extraTickId = setInterval(playTick, 1000);
-              }
-            }, 500);
-          } else {
-            // Normal mode
-            resumeHalfTickTimer = setTimeout(() => {
-              if (phase === 'countdown' && !paused) {
-                playHalfTick();
-                halfTickId = setInterval(playHalfTick, 1000);
-              }
-            }, 500);
-          }
-        }
-      }, timeToNextTick * 1000);
-    });
-  }
+                timeRemaining--;
+                if (timeRemaining <= 0) {
+                    clearInterval(tickId);
+                    clearInterval(halfTickId);
+                    halfTickId = null;
+                    clearInterval(extraTickId);
+                    extraTickId = null;
+                    finishCountdown();
+                    return;
+                }
+                countdownNum.textContent = timeRemaining;
+                updateLabel(timeRemaining);
+                if (timeRemaining === 10) {
+                    // Switch to double-speed sounds for the last 10 seconds
+                    clearInterval(halfTickId);
+                    halfTickId = null;
+                    clearTimeout(resumeHalfTickTimer);
+                    resumeHalfTickTimer = setTimeout(() => {
+                        if (phase === "countdown" && !paused) {
+                            playHalfTick();
+                            halfTickId = setInterval(playHalfTick, 500);
+                        }
+                    }, 250);
+                    resumeExtraTickTimer = setTimeout(() => {
+                        if (phase === "countdown" && !paused) {
+                            playTick();
+                            extraTickId = setInterval(playTick, 1000);
+                        }
+                    }, 500);
+                }
+                if (timeRemaining <= 10) punchNum(countdownNum);
+                if (timeRemaining <= 10) speak(String(timeRemaining));
+                else if (MILESTONES.has(timeRemaining))
+                    speak(`${timeRemaining} seconds left`);
+            }
 
-  // ── Phase: Done ───────────────────────────────────────────────────────────
-  function finishCountdown() {
-    phase = 'done';
-    cancelAnimationFrame(rafId);
-    greenPanel.style.transform = 'translateY(-100%)';
-    updateEdgeLine(1);
-    flashOverlay.classList.remove('do-flash');
-    void flashOverlay.offsetWidth;
-    flashOverlay.classList.add('do-flash');
-    speak('Stop!');
-    showView('done');
-  }
+            // ── Pause / Resume ────────────────────────────────────────────────────────
+            function pauseTimer() {
+                if (phase !== "countdown" || paused) return;
+                paused = true;
+                pausedElapsed += (performance.now() - startTs) / 1000;
+                cancelAnimationFrame(rafId);
+                clearInterval(tickId);
+                clearInterval(halfTickId);
+                halfTickId = null;
+                clearInterval(extraTickId);
+                extraTickId = null;
+                clearTimeout(resumeTickTimer);
+                clearTimeout(resumeHalfTickTimer);
+                clearTimeout(resumeExtraTickTimer);
+                countdownView.classList.add("paused");
+                greenPanel.classList.add("paused");
+                if (window.speechSynthesis) window.speechSynthesis.cancel();
+                speak("Paused");
+            }
 
-  // ── Reset ─────────────────────────────────────────────────────────────────
-  function reset() {
-    phase = 'idle'; paused = false; pausedElapsed = 0;
-    clearInterval(tickId);
-    clearInterval(halfTickId); halfTickId = null;
-    clearInterval(extraTickId); extraTickId = null;
-    clearInterval(readyId);
-    cancelAnimationFrame(rafId);
-    clearTimeout(resumeTickTimer);
-    clearTimeout(resumeHalfTickTimer);
-    clearTimeout(resumeExtraTickTimer);
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+            function resumeTimer() {
+                if (phase !== "countdown" || !paused) return;
+                paused = false;
+                countdownView.classList.remove("paused");
+                greenPanel.classList.remove("paused");
+                const label = `${timeRemaining} ${timeRemaining === 1 ? "second" : "seconds"}`;
+                speakThen(label, () => {
+                    if (phase !== "countdown" || paused) return;
+                    startTs = performance.now();
+                    rafId = requestAnimationFrame(rafLoop);
 
-    configured = 60;
-    idleNum.textContent = configured;
-    countdownView.classList.remove('paused');
-    greenPanel.classList.remove('paused');
+                    // Fire the next tick at the correct moment then set interval
+                    const timeToNextTick =
+                        Math.floor(pausedElapsed) + 1 - pausedElapsed;
+                    resumeTickTimer = setTimeout(() => {
+                        tick();
+                        if (phase === "countdown") {
+                            tickId = setInterval(tick, 1000);
+                            if (timeRemaining === 10) {
+                                // tick() just switched to fast mode — sounds already scheduled
+                            } else if (timeRemaining < 10) {
+                                // Resuming mid-fast-mode — re-sync fast sounds
+                                resumeHalfTickTimer = setTimeout(() => {
+                                    if (phase === "countdown" && !paused) {
+                                        playHalfTick();
+                                        halfTickId = setInterval(
+                                            playHalfTick,
+                                            500,
+                                        );
+                                    }
+                                }, 250);
+                                resumeExtraTickTimer = setTimeout(() => {
+                                    if (phase === "countdown" && !paused) {
+                                        playTick();
+                                        extraTickId = setInterval(
+                                            playTick,
+                                            1000,
+                                        );
+                                    }
+                                }, 500);
+                            } else {
+                                // Normal mode
+                                resumeHalfTickTimer = setTimeout(() => {
+                                    if (phase === "countdown" && !paused) {
+                                        playHalfTick();
+                                        halfTickId = setInterval(
+                                            playHalfTick,
+                                            1000,
+                                        );
+                                    }
+                                }, 500);
+                            }
+                        }
+                    }, timeToNextTick * 1000);
+                });
+            }
 
-    greenPanel.style.transition = 'none';
-    greenPanel.style.transform  = 'translateY(0%)';
-    updateEdgeLine(0);
-    showView('idle');
-  }
+            // ── Phase: Done ───────────────────────────────────────────────────────────
+            function finishCountdown() {
+                phase = "done";
+                cancelAnimationFrame(rafId);
+                greenPanel.style.transform = "translateY(-100%)";
+                updateEdgeLine(1);
+                flashOverlay.classList.remove("do-flash");
+                void flashOverlay.offsetWidth;
+                flashOverlay.classList.add("do-flash");
+                speak("Stop!");
+                showView("done");
+            }
 
-  // ── Long-press ring helpers ───────────────────────────────────────────────
-  function showRing() {
-    lpRing.classList.remove('filling');
-    void lpRing.offsetWidth;
-    lpRing.classList.add('show');
-    requestAnimationFrame(() => lpRing.classList.add('filling'));
-  }
-  function hideRing() {
-    lpRing.classList.remove('show', 'filling');
-  }
+            // ── Reset ─────────────────────────────────────────────────────────────────
+            function reset() {
+                phase = "idle";
+                paused = false;
+                pausedElapsed = 0;
+                clearInterval(tickId);
+                clearInterval(halfTickId);
+                halfTickId = null;
+                clearInterval(extraTickId);
+                extraTickId = null;
+                clearInterval(readyId);
+                cancelAnimationFrame(rafId);
+                clearTimeout(resumeTickTimer);
+                clearTimeout(resumeHalfTickTimer);
+                clearTimeout(resumeExtraTickTimer);
+                if (window.speechSynthesis) window.speechSynthesis.cancel();
 
-  // ── Touch / pointer gestures ──────────────────────────────────────────────
-  let pressTimer  = null;
-  let pressActive = false;
-  let pressMoved  = false;
+                configured =
+                    parseInt(localStorage.getItem(STORAGE_KEY), 10) || 60;
+                idleNum.textContent = configured;
+                countdownView.classList.remove("paused");
+                greenPanel.classList.remove("paused");
 
-  function onPressStart(e) {
-    // Ignore taps on interactive controls in idle/done views
-    if (e.target.closest('button')) return;
-    if (phase === 'idle' || phase === 'done') return;
+                greenPanel.style.transition = "none";
+                greenPanel.style.transform = "translateY(0%)";
+                updateEdgeLine(0);
+                showView("idle");
+            }
 
-    pressActive = true;
-    pressMoved  = false;
+            // ── Long-press ring helpers ───────────────────────────────────────────────
+            function showRing() {
+                lpRing.classList.remove("filling");
+                void lpRing.offsetWidth;
+                lpRing.classList.add("show");
+                requestAnimationFrame(() => lpRing.classList.add("filling"));
+            }
+            function hideRing() {
+                lpRing.classList.remove("show", "filling");
+            }
 
-    showRing();
-    pressTimer = setTimeout(() => {
-      pressActive = false;
-      hideRing();
-      reset();
-    }, LONG_PRESS_MS);
-  }
+            // ── Touch / pointer gestures ──────────────────────────────────────────────
+            let pressTimer = null;
+            let pressActive = false;
+            let pressMoved = false;
 
-  function onPressEnd(e) {
-    if (!pressActive) return;
-    pressActive = false;
-    clearTimeout(pressTimer);
-    hideRing();
-    if (e.cancelable) e.preventDefault();
+            function onPressStart(e) {
+                // Ignore taps on interactive controls in idle/done views
+                if (e.target.closest("button")) return;
+                if (phase === "idle" || phase === "done") return;
 
-    if (pressMoved) return; // was a scroll, not a tap
+                pressActive = true;
+                pressMoved = false;
 
-    // Short tap action
-    if (phase === 'ready') {
-      // Cancel get-ready and go back to idle
-      clearInterval(readyId);
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-      phase = 'idle';
-      greenPanel.style.transition = 'none';
-      greenPanel.style.transform  = 'translateY(0%)';
-      updateEdgeLine(0);
-      showView('idle');
-    } else if (phase === 'countdown') {
-      paused ? resumeTimer() : pauseTimer();
-    }
-  }
+                showRing();
+                pressTimer = setTimeout(() => {
+                    pressActive = false;
+                    hideRing();
+                    reset();
+                }, LONG_PRESS_MS);
+            }
 
-  function onPressMove() {
-    if (!pressActive) return;
-    pressMoved = true;
-    clearTimeout(pressTimer);
-    hideRing();
-    pressActive = false;
-  }
+            function onPressEnd(e) {
+                if (!pressActive) return;
+                pressActive = false;
+                clearTimeout(pressTimer);
+                hideRing();
+                if (e.cancelable) e.preventDefault();
 
-  // Use touch events on mobile, mouse events as fallback
-  app.addEventListener('touchstart',  onPressStart, { passive: true });
-  app.addEventListener('touchend',    onPressEnd);
-  app.addEventListener('touchcancel', onPressEnd);
-  app.addEventListener('touchmove',   onPressMove,  { passive: true });
+                if (pressMoved) return; // was a scroll, not a tap
 
-  app.addEventListener('mousedown', onPressStart);
-  app.addEventListener('mouseup',   onPressEnd);
-  app.addEventListener('mousemove', (e) => { if (e.buttons) onPressMove(); });
+                // Short tap action
+                if (phase === "ready") {
+                    // Cancel get-ready and go back to idle
+                    clearInterval(readyId);
+                    if (window.speechSynthesis) window.speechSynthesis.cancel();
+                    phase = "idle";
+                    greenPanel.style.transition = "none";
+                    greenPanel.style.transform = "translateY(0%)";
+                    updateEdgeLine(0);
+                    showView("idle");
+                } else if (phase === "countdown") {
+                    paused ? resumeTimer() : pauseTimer();
+                }
+            }
 
-  // Prevent browser context menu on long-press
-  app.addEventListener('contextmenu', e => e.preventDefault());
-</script>
-</body>
+            function onPressMove() {
+                if (!pressActive) return;
+                pressMoved = true;
+                clearTimeout(pressTimer);
+                hideRing();
+                pressActive = false;
+            }
+
+            // Use touch events on mobile, mouse events as fallback
+            app.addEventListener("touchstart", onPressStart, { passive: true });
+            app.addEventListener("touchend", onPressEnd);
+            app.addEventListener("touchcancel", onPressEnd);
+            app.addEventListener("touchmove", onPressMove, { passive: true });
+
+            app.addEventListener("mousedown", onPressStart);
+            app.addEventListener("mouseup", onPressEnd);
+            app.addEventListener("mousemove", (e) => {
+                if (e.buttons) onPressMove();
+            });
+
+            // Prevent browser context menu on long-press
+            app.addEventListener("contextmenu", (e) => e.preventDefault());
+        </script>
+    </body>
 </html>
