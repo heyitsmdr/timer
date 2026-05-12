@@ -11,7 +11,7 @@
             name="apple-mobile-web-app-status-bar-style"
             content="black-translucent"
         />
-        <title>Timer</title>
+        <title>Thursdays</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
             href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400&display=swap"
@@ -458,7 +458,7 @@
             </div>
 
             <div id="content">
-                <div id="git-hash">b784aef</div>
+                <div id="git-hash">d64912b</div>
 
                 <div id="thursday-countdown">
                     <div id="thursday-label">Next Thursday · 12PM</div>
@@ -505,7 +505,9 @@
                     </div>
                     <div id="done-actions">
                         <button class="reset-btn" id="reset-btn">Reset</button>
-                        <button class="clear-stats-btn" id="clear-stats-btn">Clear Stats</button>
+                        <button class="clear-stats-btn" id="clear-stats-btn">
+                            Clear Stats
+                        </button>
                     </div>
                 </div>
             </div>
@@ -681,14 +683,17 @@
 
             // ── Helpers ───────────────────────────────────────────────────────────────
             const gitHash = document.getElementById("git-hash");
-            const thursdayCountdown = document.getElementById("thursday-countdown");
+            const thursdayCountdown =
+                document.getElementById("thursday-countdown");
             const thursdayTimerEl = document.getElementById("thursday-timer");
 
             function getNextThursdayNoon() {
                 const now = new Date();
                 let daysUntil = (4 - now.getDay() + 7) % 7;
                 if (daysUntil === 0) {
-                    const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+                    const h = now.getHours(),
+                        m = now.getMinutes(),
+                        s = now.getSeconds();
                     if (h > 12 || (h === 12 && (m > 0 || s > 0))) daysUntil = 7;
                 }
                 const target = new Date(now);
@@ -708,8 +713,7 @@
                 const h = Math.floor((total % 86400) / 3600);
                 const m = Math.floor((total % 3600) / 60);
                 const s = total % 60;
-                thursdayTimerEl.textContent =
-                    `${d}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+                thursdayTimerEl.textContent = `${d}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
             }
 
             updateThursdayCountdown();
@@ -962,26 +966,35 @@
             }
 
             function updateStats() {
-                const t = parseInt(localStorage.getItem(STATS_TIME_KEY), 10) || 0;
-                const r = parseInt(localStorage.getItem(STATS_RUNS_KEY), 10) || 0;
-                document.getElementById("stat-time").textContent = t === 0 ? "—" : formatTotalTime(t);
-                document.getElementById("stat-runs").textContent = r === 0 ? "—" : r;
+                const t =
+                    parseInt(localStorage.getItem(STATS_TIME_KEY), 10) || 0;
+                const r =
+                    parseInt(localStorage.getItem(STATS_RUNS_KEY), 10) || 0;
+                document.getElementById("stat-time").textContent =
+                    t === 0 ? "—" : formatTotalTime(t);
+                document.getElementById("stat-runs").textContent =
+                    r === 0 ? "—" : r;
                 const idleStats = document.getElementById("idle-stats");
                 if (t === 0 && r === 0) {
                     idleStats.textContent = "";
                 } else {
                     const timeStr = t > 0 ? formatTotalTime(t) : null;
-                    const runsStr = r > 0 ? `${r} session${r === 1 ? "" : "s"}` : null;
-                    idleStats.textContent = [runsStr, timeStr].filter(Boolean).join("  ·  ");
+                    const runsStr =
+                        r > 0 ? `${r} session${r === 1 ? "" : "s"}` : null;
+                    idleStats.textContent = [runsStr, timeStr]
+                        .filter(Boolean)
+                        .join("  ·  ");
                 }
             }
 
-            document.getElementById("clear-stats-btn").addEventListener("click", () => {
-                localStorage.removeItem(STATS_TIME_KEY);
-                localStorage.removeItem(STATS_RUNS_KEY);
-                updateStats();
-                playClick();
-            });
+            document
+                .getElementById("clear-stats-btn")
+                .addEventListener("click", () => {
+                    localStorage.removeItem(STATS_TIME_KEY);
+                    localStorage.removeItem(STATS_RUNS_KEY);
+                    updateStats();
+                    playClick();
+                });
 
             // ── Phase: Done ───────────────────────────────────────────────────────────
             function finishCountdown() {
@@ -993,8 +1006,12 @@
                 void flashOverlay.offsetWidth;
                 flashOverlay.classList.add("do-flash");
                 speak("Stop!");
-                const newTime = (parseInt(localStorage.getItem(STATS_TIME_KEY), 10) || 0) + totalTime;
-                const newRuns = (parseInt(localStorage.getItem(STATS_RUNS_KEY), 10) || 0) + 1;
+                const newTime =
+                    (parseInt(localStorage.getItem(STATS_TIME_KEY), 10) || 0) +
+                    totalTime;
+                const newRuns =
+                    (parseInt(localStorage.getItem(STATS_RUNS_KEY), 10) || 0) +
+                    1;
                 localStorage.setItem(STATS_TIME_KEY, newTime);
                 localStorage.setItem(STATS_RUNS_KEY, newRuns);
                 updateStats();
