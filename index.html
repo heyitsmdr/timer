@@ -138,6 +138,34 @@
                 pointer-events: none;
             }
 
+            #thursday-countdown {
+                position: fixed;
+                top: max(20px, env(safe-area-inset-top));
+                left: 0;
+                width: 100%;
+                text-align: center;
+                pointer-events: none;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 5px;
+            }
+            #thursday-label {
+                font-family: "Barlow", sans-serif;
+                font-weight: 300;
+                font-size: 9px;
+                letter-spacing: 0.35em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.45);
+            }
+            #thursday-timer {
+                font-family: "Barlow", sans-serif;
+                font-weight: 400;
+                font-size: 11px;
+                letter-spacing: 0.15em;
+                color: rgba(255, 255, 255, 0.65);
+            }
+
             .adj-row {
                 display: flex;
                 gap: 10px;
@@ -270,6 +298,59 @@
                 gap: 36px;
             }
 
+            #done-stats {
+                display: flex;
+                gap: 48px;
+            }
+
+            .stat-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .stat-value {
+                font-family: "Bebas Neue", sans-serif;
+                font-size: clamp(30px, 9vw, 42px);
+                line-height: 1;
+                color: var(--text);
+                letter-spacing: 1px;
+            }
+
+            .stat-label {
+                font-family: "Barlow", sans-serif;
+                font-weight: 300;
+                font-size: 9px;
+                letter-spacing: 0.35em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.4);
+            }
+
+            #done-actions {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 14px;
+            }
+
+            .clear-stats-btn {
+                font-family: "Barlow", sans-serif;
+                font-weight: 300;
+                font-size: 10px;
+                letter-spacing: 0.3em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.25);
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                padding: 6px 12px;
+                transition: color 0.12s;
+            }
+            .clear-stats-btn:active {
+                color: rgba(255, 255, 255, 0.55);
+            }
+
             .reset-btn {
                 font-family: "Barlow", sans-serif;
                 font-weight: 300;
@@ -286,6 +367,16 @@
             }
             .reset-btn:active {
                 background: rgba(255, 255, 255, 0.08);
+            }
+
+            #idle-stats {
+                margin-top: 32px;
+                font-family: "Barlow", sans-serif;
+                font-weight: 300;
+                font-size: 12px;
+                letter-spacing: 0.2em;
+                color: rgba(255, 255, 255, 0.5);
+                text-align: center;
             }
 
             /* ── Animations ── */
@@ -367,7 +458,12 @@
             </div>
 
             <div id="content">
-                <div id="git-hash">4a702fa</div>
+                <div id="git-hash">b784aef</div>
+
+                <div id="thursday-countdown">
+                    <div id="thursday-label">Next Thursday · 12PM</div>
+                    <div id="thursday-timer"></div>
+                </div>
 
                 <!-- IDLE -->
                 <div id="idle-view">
@@ -378,6 +474,7 @@
                         <button class="adj-btn" id="plus-btn">+ 1s</button>
                     </div>
                     <button class="start-btn" id="start-btn">Start</button>
+                    <div id="idle-stats"></div>
                 </div>
 
                 <!-- GET READY -->
@@ -396,7 +493,20 @@
                 <!-- DONE -->
                 <div id="done-view" class="hidden">
                     <div class="stop-word">Stop!</div>
-                    <button class="reset-btn" id="reset-btn">Reset</button>
+                    <div id="done-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-time">—</div>
+                            <div class="stat-label">Total Time</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-runs">—</div>
+                            <div class="stat-label">Sessions</div>
+                        </div>
+                    </div>
+                    <div id="done-actions">
+                        <button class="reset-btn" id="reset-btn">Reset</button>
+                        <button class="clear-stats-btn" id="clear-stats-btn">Clear Stats</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -425,6 +535,8 @@
 
             // ── State ─────────────────────────────────────────────────────────────────
             const STORAGE_KEY = "timer_configured";
+            const STATS_TIME_KEY = "timer_total_time";
+            const STATS_RUNS_KEY = "timer_total_runs";
             let configured =
                 parseInt(localStorage.getItem(STORAGE_KEY), 10) || 60;
             let totalTime = 60;
@@ -569,11 +681,48 @@
 
             // ── Helpers ───────────────────────────────────────────────────────────────
             const gitHash = document.getElementById("git-hash");
+            const thursdayCountdown = document.getElementById("thursday-countdown");
+            const thursdayTimerEl = document.getElementById("thursday-timer");
+
+            function getNextThursdayNoon() {
+                const now = new Date();
+                let daysUntil = (4 - now.getDay() + 7) % 7;
+                if (daysUntil === 0) {
+                    const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+                    if (h > 12 || (h === 12 && (m > 0 || s > 0))) daysUntil = 7;
+                }
+                const target = new Date(now);
+                target.setDate(now.getDate() + daysUntil);
+                target.setHours(12, 0, 0, 0);
+                return target;
+            }
+
+            function updateThursdayCountdown() {
+                const diff = getNextThursdayNoon() - Date.now();
+                if (diff <= 0) {
+                    thursdayTimerEl.textContent = "now";
+                    return;
+                }
+                const total = Math.floor(diff / 1000);
+                const d = Math.floor(total / 86400);
+                const h = Math.floor((total % 86400) / 3600);
+                const m = Math.floor((total % 3600) / 60);
+                const s = total % 60;
+                thursdayTimerEl.textContent =
+                    `${d}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+            }
+
+            updateThursdayCountdown();
+            setInterval(updateThursdayCountdown, 1000);
+            updateStats();
 
             function showView(name) {
                 Object.values(views).forEach((v) => v.classList.add("hidden"));
                 views[name].classList.remove("hidden");
-                gitHash.style.display = name === "idle" ? "" : "none";
+                const idleOnly = name === "idle" ? "" : "none";
+                gitHash.style.display = idleOnly;
+                thursdayCountdown.style.display = idleOnly;
+                if (name === "idle") updateStats();
             }
 
             function punchNum(el) {
@@ -801,6 +950,39 @@
                 });
             }
 
+            // ── Stats ─────────────────────────────────────────────────────────────────
+            function formatTotalTime(seconds) {
+                if (seconds < 60) return `${seconds}s`;
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                if (seconds < 3600) return s === 0 ? `${m}m` : `${m}m ${s}s`;
+                const h = Math.floor(seconds / 3600);
+                const rem = Math.floor((seconds % 3600) / 60);
+                return rem === 0 ? `${h}h` : `${h}h ${rem}m`;
+            }
+
+            function updateStats() {
+                const t = parseInt(localStorage.getItem(STATS_TIME_KEY), 10) || 0;
+                const r = parseInt(localStorage.getItem(STATS_RUNS_KEY), 10) || 0;
+                document.getElementById("stat-time").textContent = t === 0 ? "—" : formatTotalTime(t);
+                document.getElementById("stat-runs").textContent = r === 0 ? "—" : r;
+                const idleStats = document.getElementById("idle-stats");
+                if (t === 0 && r === 0) {
+                    idleStats.textContent = "";
+                } else {
+                    const timeStr = t > 0 ? formatTotalTime(t) : null;
+                    const runsStr = r > 0 ? `${r} session${r === 1 ? "" : "s"}` : null;
+                    idleStats.textContent = [runsStr, timeStr].filter(Boolean).join("  ·  ");
+                }
+            }
+
+            document.getElementById("clear-stats-btn").addEventListener("click", () => {
+                localStorage.removeItem(STATS_TIME_KEY);
+                localStorage.removeItem(STATS_RUNS_KEY);
+                updateStats();
+                playClick();
+            });
+
             // ── Phase: Done ───────────────────────────────────────────────────────────
             function finishCountdown() {
                 phase = "done";
@@ -811,6 +993,11 @@
                 void flashOverlay.offsetWidth;
                 flashOverlay.classList.add("do-flash");
                 speak("Stop!");
+                const newTime = (parseInt(localStorage.getItem(STATS_TIME_KEY), 10) || 0) + totalTime;
+                const newRuns = (parseInt(localStorage.getItem(STATS_RUNS_KEY), 10) || 0) + 1;
+                localStorage.setItem(STATS_TIME_KEY, newTime);
+                localStorage.setItem(STATS_RUNS_KEY, newRuns);
+                updateStats();
                 showView("done");
             }
 
