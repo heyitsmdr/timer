@@ -125,6 +125,54 @@
                 align-items: center;
             }
 
+            /* ── Range dial (half-arc over the seconds number) ── */
+            /* The semicircle must be wide enough for the digits to clear its
+               shoulders, so the idle number runs smaller than the countdown one. */
+            .dial {
+                position: relative;
+                font-size: clamp(70px, 31vw, 145px);
+                width: 2.5em;
+                height: 1.3em;
+                display: flex;
+                align-items: flex-end;
+                justify-content: center;
+            }
+            .dial .big-num {
+                font-size: 1em;
+            }
+            .dial-svg {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                overflow: visible;
+                pointer-events: none;
+            }
+            .dial-track {
+                fill: none;
+                stroke: rgba(255, 255, 255, 0.15);
+                stroke-width: 3;
+                stroke-linecap: round;
+            }
+            .dial-fill {
+                fill: none;
+                stroke: rgba(255, 255, 255, 0.45);
+                stroke-width: 3;
+                stroke-linecap: round;
+            }
+            .dial-mark {
+                fill: rgba(255, 255, 255, 0.25);
+            }
+            .dial-dot {
+                fill: var(--text);
+                transition: transform 0.14s ease;
+            }
+            .dial-dot.beyond {
+                fill: none;
+                stroke: rgba(255, 255, 255, 0.75);
+                stroke-width: 3;
+            }
+
             #git-hash {
                 position: fixed;
                 bottom: max(16px, env(safe-area-inset-bottom));
@@ -458,7 +506,7 @@
             </div>
 
             <div id="content">
-                <div id="git-hash">d64912b</div>
+                <div id="git-hash">8393f9c</div>
 
                 <div id="thursday-countdown">
                     <div id="thursday-label">Next Thursday · 12PM</div>
@@ -467,7 +515,20 @@
 
                 <!-- IDLE -->
                 <div id="idle-view">
-                    <div class="big-num" id="idle-num">60</div>
+                    <div class="dial">
+                        <svg class="dial-svg" viewBox="0 0 250 130" aria-hidden="true">
+                            <path
+                                class="dial-track"
+                                d="M 15 124 A 110 110 0 0 1 235 124"
+                            />
+                            <path class="dial-fill" id="dial-fill" d="" />
+                            <circle class="dial-mark" cx="5" cy="124" r="2.5" />
+                            <circle class="dial-mark" cx="125" cy="4" r="2.5" />
+                            <circle class="dial-mark" cx="245" cy="124" r="2.5" />
+                            <circle class="dial-dot" id="dial-dot" cx="0" cy="0" r="7" />
+                        </svg>
+                        <div class="big-num" id="idle-num">60</div>
+                    </div>
                     <div class="small-label">seconds</div>
                     <div class="adj-row">
                         <button class="adj-btn" id="minus-btn">− 1s</button>
@@ -528,9 +589,6 @@
                 done: document.getElementById("done-view"),
             };
             const idleNum = document.getElementById("idle-num");
-            // Reflect persisted value in the idle display immediately
-            document.getElementById("idle-num").textContent =
-                parseInt(localStorage.getItem("timer_configured"), 10) || 60;
             const readyNum = document.getElementById("ready-num");
             const countdownNum = document.getElementById("countdown-num");
             const countdownLbl = document.getElementById("countdown-label");
@@ -539,10 +597,16 @@
             const STORAGE_KEY = "timer_configured";
             const STATS_TIME_KEY = "timer_total_time";
             const STATS_RUNS_KEY = "timer_total_runs";
+            const DEFAULT_SECONDS = 60;
+            const SOFT_MIN = 30; // soft cap — the dial pins here, buttons pass through
+            const SOFT_MAX = 90;
+            const HARD_MIN = 5;
+            const HARD_MAX = 999;
             let configured =
-                parseInt(localStorage.getItem(STORAGE_KEY), 10) || 60;
-            let totalTime = 60;
-            let timeRemaining = 60;
+                parseInt(localStorage.getItem(STORAGE_KEY), 10) ||
+                DEFAULT_SECONDS;
+            let totalTime = DEFAULT_SECONDS;
+            let timeRemaining = DEFAULT_SECONDS;
             let phase = "idle"; // idle | ready | countdown | done
             let paused = false;
             let pausedElapsed = 0; // seconds elapsed before current run segment
@@ -745,25 +809,85 @@
                     progress > 0.01 && progress < 0.99 ? "1" : "0";
             }
 
+            // ── Range dial ────────────────────────────────────────────────────────────
+            const dialFill = document.getElementById("dial-fill");
+            const dialDot = document.getElementById("dial-dot");
+            const DIAL_R = 110;
+            const DIAL_CX = 125;
+            const DIAL_CY = 124;
+
+            // 0 = far left (<= SOFT_MIN), 0.5 = apex (DEFAULT_SECONDS), 1 = far right (>= SOFT_MAX)
+            function dialFraction(v) {
+                const t =
+                    v >= DEFAULT_SECONDS
+                        ? Math.min(
+                              1,
+                              (v - DEFAULT_SECONDS) /
+                                  (SOFT_MAX - DEFAULT_SECONDS),
+                          )
+                        : -Math.min(
+                              1,
+                              (DEFAULT_SECONDS - v) /
+                                  (DEFAULT_SECONDS - SOFT_MIN),
+                          );
+                return (t + 1) / 2;
+            }
+
+            function dialPoint(f) {
+                const a = Math.PI * (1 - f); // f=0 → 180° (left), f=1 → 0° (right)
+                return [
+                    DIAL_CX + DIAL_R * Math.cos(a),
+                    DIAL_CY - DIAL_R * Math.sin(a),
+                ];
+            }
+
+            function renderDial() {
+                const f = dialFraction(configured);
+                const [x, y] = dialPoint(f);
+                dialDot.style.transform = `translate(${x}px, ${y}px)`;
+                dialDot.classList.toggle(
+                    "beyond",
+                    configured < SOFT_MIN || configured > SOFT_MAX,
+                );
+
+                // Fill segment from the apex out to the dot
+                if (Math.abs(f - 0.5) < 0.001) {
+                    dialFill.setAttribute("d", "");
+                } else {
+                    const [ax, ay] = dialPoint(0.5);
+                    const sweep = f > 0.5 ? 1 : 0;
+                    dialFill.setAttribute(
+                        "d",
+                        `M ${ax} ${ay} A ${DIAL_R} ${DIAL_R} 0 0 ${sweep} ${x} ${y}`,
+                    );
+                }
+            }
+
+            function renderIdle() {
+                idleNum.textContent = configured;
+                renderDial();
+            }
+
+            function setConfigured(v) {
+                configured = Math.min(HARD_MAX, Math.max(HARD_MIN, v));
+                localStorage.setItem(STORAGE_KEY, configured);
+                renderIdle();
+            }
+
+            // Paint the persisted value into the idle view on load
+            renderIdle();
+
             // ── Button handlers ───────────────────────────────────────────────────────
             document
                 .getElementById("minus-btn")
                 .addEventListener("click", () => {
-                    if (configured > 5) {
-                        configured--;
-                        idleNum.textContent = configured;
-                        localStorage.setItem(STORAGE_KEY, configured);
-                    }
+                    setConfigured(configured - 1);
                     playClick();
                 });
             document
                 .getElementById("plus-btn")
                 .addEventListener("click", () => {
-                    if (configured < 999) {
-                        configured++;
-                        idleNum.textContent = configured;
-                        localStorage.setItem(STORAGE_KEY, configured);
-                    }
+                    setConfigured(configured + 1);
                     playClick();
                 });
             document
@@ -1036,8 +1160,9 @@
                 if (window.speechSynthesis) window.speechSynthesis.cancel();
 
                 configured =
-                    parseInt(localStorage.getItem(STORAGE_KEY), 10) || 60;
-                idleNum.textContent = configured;
+                    parseInt(localStorage.getItem(STORAGE_KEY), 10) ||
+                    DEFAULT_SECONDS;
+                renderIdle();
                 countdownView.classList.remove("paused");
                 greenPanel.classList.remove("paused");
 
